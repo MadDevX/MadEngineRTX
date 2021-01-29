@@ -327,8 +327,12 @@ void PlaneClosestHit(inout HitInfo payload, Attributes attrib)
     float3 barycentrics =
         float3(1.0f - attrib.bary.x - attrib.bary.y, attrib.bary.x, attrib.bary.y);
     
+    float3 objectColor = BTriVertex[indices[vertId + 0]].color * barycentrics.x +
+                         BTriVertex[indices[vertId + 1]].color * barycentrics.y +
+                         BTriVertex[indices[vertId + 2]].color * barycentrics.z;
+    
     // #DXR Custom: Simple Lighting
-    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR) * PLANE_COL;
+    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR) * objectColor;
     
     float3 reflColor = MIX_FACTOR * reflectionPayloads[lastValidReflection].colorAndDistance.xyz + (1.0f - MIX_FACTOR) * SKY_COL;
     

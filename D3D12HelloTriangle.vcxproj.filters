@@ -60,6 +60,12 @@
     <ClInclude Include="manipulator.h">
       <Filter>manipulator</Filter>
     </ClInclude>
+    <ClInclude Include="MeshDataUtility.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VertexTypes.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="stdafx.cpp">
@@ -94,6 +100,9 @@
     </ClCompile>
     <ClCompile Include="manipulator.cpp">
       <Filter>manipulator</Filter>
+    </ClCompile>
+    <ClCompile Include="MeshDataUtility.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

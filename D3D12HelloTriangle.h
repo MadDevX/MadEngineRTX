@@ -17,6 +17,7 @@
 #include "DXSample.h"
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
 #include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
+#include "VertexTypes.h"
 
 
 using namespace DirectX;
@@ -41,12 +42,6 @@ public:
 private:
 	static const UINT FrameCount = 2;
 
-	struct Vertex
-	{
-		XMFLOAT3 position;
-		XMFLOAT4 color;
-	};
-
 	// Pipeline objects.
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
@@ -62,8 +57,8 @@ private:
 	UINT m_rtvDescriptorSize;
 
 	// App resources.
-	ComPtr<ID3D12Resource> m_vertexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	ComPtr<ID3D12Resource> m_tetrahedronVertexBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_tetrahedronVertexBufferView;
 
 	// Synchronization objects.
 	UINT m_frameIndex;
@@ -161,9 +156,8 @@ private:
 	void OnMouseMove(UINT8 wParam, UINT32 lParam);
 
 	// #DXR Extra: Per-Instance Data
-	ComPtr<ID3D12Resource> m_planeBuffer;
-	D3D12_VERTEX_BUFFER_VIEW m_planeBufferView;
-	void CreatePlaneVB();
+	ComPtr<ID3D12Resource> m_planeVertexBuffer;
+	D3D12_VERTEX_BUFFER_VIEW m_planeVertexBufferView;
 
 	void D3D12HelloTriangle::CreateGlobalConstantBuffer();
 	ComPtr<ID3D12Resource> m_globalConstantBuffer;
@@ -178,8 +172,8 @@ private:
 	ComPtr<ID3D12Resource> m_depthStencil;
 
 	// #DXR Extra: Indexed Geometry
-	ComPtr<ID3D12Resource> m_indexBuffer;
-	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+	ComPtr<ID3D12Resource> m_tetrahedronIndexBuffer;
+	D3D12_INDEX_BUFFER_VIEW m_tetrahedronIndexBufferView;
 
 	// #DXR Extra: Another ray type
 	ComPtr<IDxcBlob> m_shadowLibrary;
@@ -209,4 +203,11 @@ private:
 	// #DXR Custom: Indexed Plane
 	ComPtr<ID3D12Resource> m_planeIndexBuffer;
 	D3D12_INDEX_BUFFER_VIEW m_planeIndexBufferView;
+
+
+	// #DXR Custom: Slight Code Refactor
+	void CreateMeshBuffers(
+		std::vector<Vertex>& vertices, ComPtr<ID3D12Resource>& vertexBuffer, D3D12_VERTEX_BUFFER_VIEW& vertexBufferView,
+		std::vector<UINT>& indices, ComPtr<ID3D12Resource>& indexBuffer, D3D12_INDEX_BUFFER_VIEW& indexBufferView);
+
 };

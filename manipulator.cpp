@@ -318,7 +318,7 @@ void Manipulator::update()
 //
 void Manipulator::pan(float dx, float dy)
 {
-  if (m_mode == Fly)
+  if (m_mode == Fly || m_mode == Examine)
   {
     dx *= -1;
     dy *= -1;
