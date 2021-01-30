@@ -126,6 +126,7 @@
   <ItemGroup>
     <ClInclude Include="DXRHelper.h" />
     <ClInclude Include="manipulator.h" />
+    <ClInclude Include="MaterialTypes.h" />
     <ClInclude Include="MeshDataUtility.h" />
     <ClInclude Include="nv_helpers_dx12\BottomLevelASGenerator.h" />
     <ClInclude Include="nv_helpers_dx12\RaytracingPipelineGenerator.h" />

@@ -854,7 +854,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	pipeline.AddLibrary(m_missLibrary.Get(), { L"Miss" });
 	//pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit" });
 	// #DXR Extra: Per-Instance Data
-	pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit", L"PlaneClosestHit" });
+	pipeline.AddLibrary(m_hitLibrary.Get(), { L"ClosestHit"/*, L"PlaneClosestHit"*/ });
 
 
 	// To be used, each DX12 shader needs a root signature defining which
@@ -883,7 +883,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	pipeline.AddHitGroup(L"HitGroup", L"ClosestHit");
 
 	// #DXR Extra: Per-Instance Data
-	pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit");
+	// pipeline.AddHitGroup(L"PlaneHitGroup", L"PlaneClosestHit"); // redundant hit group, differences between ClosestHit and PlaneClosestHit disappeared
 
 	// #DXR Extra: Another Ray Type
 	pipeline.AddHitGroup(L"ShadowHitGroup", L"ShadowClosestHit");
@@ -904,7 +904,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	//pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup" });
 	
 	// #DXR Extra: Per-Instance Data
-	pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup", L"PlaneHitGroup" });
+	pipeline.AddRootSignatureAssociation(m_hitSignature.Get(), { L"HitGroup"/*, L"PlaneHitGroup" */});
 
 
 	// The payload size defines the maximum size of the data carried by the rays,
@@ -1087,7 +1087,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 	//m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()) });
 
 	// #DXR Extra: Per-Instance Data (Plane)
-	m_sbtHelper.AddHitGroup(L"PlaneHitGroup", 
+	m_sbtHelper.AddHitGroup(L"HitGroup", 
 		{
 			(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Directional Shadows
 			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Indexed Plane
