@@ -18,6 +18,9 @@
 #include "nv_helpers_dx12/TopLevelASGenerator.h"
 #include "nv_helpers_dx12/ShaderBindingTableGenerator.h"
 #include "VertexTypes.h"
+#include "DirectXTex.h"
+
+#include <memory>
 
 
 using namespace DirectX;
@@ -197,7 +200,8 @@ private:
 	int m_hitGroupsPerObject = 3;
 
 	// #DXR Custom: Reflections
-	ComPtr<IDxcBlob> m_reflectionLibrary;
+	ComPtr<IDxcBlob> m_reflectionHitLibrary;
+	ComPtr<IDxcBlob> m_reflectionMissLibrary;
 	ComPtr<ID3D12RootSignature> m_reflectionSignature;
 
 	// #DXR Custom: Indexed Plane
@@ -210,4 +214,12 @@ private:
 		std::vector<Vertex>& vertices, ComPtr<ID3D12Resource>& vertexBuffer, D3D12_VERTEX_BUFFER_VIEW& vertexBufferView,
 		std::vector<UINT>& indices, ComPtr<ID3D12Resource>& indexBuffer, D3D12_INDEX_BUFFER_VIEW& indexBufferView);
 
+
+	// #DXR Custom: Upload textures
+	//std::unique_ptr<ScratchImage> m_skyboxTexture = std::make_unique<ScratchImage>();
+	ComPtr<ID3D12Resource> m_skyboxTextureBuffer;
+
+	void CreateSkyboxTextureBuffer();
+
+	ComPtr<ID3D12DescriptorHeap> m_samplerHeap;
 };

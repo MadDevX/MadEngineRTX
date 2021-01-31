@@ -181,6 +181,10 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
+    <FxCompile Include="ReflectionMiss.hlsl">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+    </FxCompile>
     <FxCompile Include="ReflectionRay.hlsl">
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ShaderType>
@@ -198,7 +202,25 @@
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
     </FxCompile>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="cape_hill_2k.hdr" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="cape_hill.jpg" />
+    <Image Include="cape_hill_2k.dds" />
+    <Image Include="cape_hill_2k.png" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
+    <Import Project="packages\directxtex_desktop_win10.2021.1.10.2\build\native\directxtex_desktop_win10.targets" Condition="Exists('packages\directxtex_desktop_win10.2021.1.10.2\build\native\directxtex_desktop_win10.targets')" />
+    <Import Project="packages\directxtk12_desktop_2017.2021.1.10.1\build\native\directxtk12_desktop_2017.targets" Condition="Exists('packages\directxtk12_desktop_2017.2021.1.10.1\build\native\directxtk12_desktop_2017.targets')" />
   </ImportGroup>
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('packages\directxtex_desktop_win10.2021.1.10.2\build\native\directxtex_desktop_win10.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtex_desktop_win10.2021.1.10.2\build\native\directxtex_desktop_win10.targets'))" />
+    <Error Condition="!Exists('packages\directxtk12_desktop_2017.2021.1.10.1\build\native\directxtk12_desktop_2017.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\directxtk12_desktop_2017.2021.1.10.1\build\native\directxtk12_desktop_2017.targets'))" />
+  </Target>
 </Project>

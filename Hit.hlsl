@@ -186,7 +186,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     
     // #DXR Custom: Simple Lighting
     float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR) * objectColor;
-    float3 reflColor = MIX_FACTOR * reflectionPayloads[lastValidReflection].colorAndDistance.xyz + (1.0f - MIX_FACTOR) * SKY_COL;
+    float3 reflColor = /*MIX_FACTOR * */reflectionPayloads[lastValidReflection].colorAndDistance.xyz /*+ (1.0f - MIX_FACTOR) * SKY_COL*/;
     
     for (i = lastValidReflection - 1; i >= 0; i--)
     {

@@ -19,6 +19,9 @@
     <Filter Include="manipulator">
       <UniqueIdentifier>{cc50ca68-7b42-41c1-98a0-0d5193d3d69f}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Assets\Textures">
+      <UniqueIdentifier>{0757afbb-9179-4dd7-8564-4862f366fa22}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h">
@@ -132,5 +135,25 @@
     <FxCompile Include="ReflectionRay.hlsl">
       <Filter>Assets\Shaders</Filter>
     </FxCompile>
+    <FxCompile Include="ReflectionMiss.hlsl">
+      <Filter>Assets\Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+    <None Include="cape_hill_2k.hdr">
+      <Filter>Assets\Textures</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="cape_hill_2k.dds">
+      <Filter>Assets\Textures</Filter>
+    </Image>
+    <Image Include="cape_hill_2k.png">
+      <Filter>Assets\Textures</Filter>
+    </Image>
+    <Image Include="cape_hill.jpg">
+      <Filter>Assets\Textures</Filter>
+    </Image>
   </ItemGroup>
 </Project>

@@ -32,14 +32,16 @@ struct STriVertex
     float4 color;
 };
 
-static const float3 LIGHT_POS = float3(2.0f, 2.0f, -2.0f);
+static const float PI = 3.14159265f;
+
+static const float3 LIGHT_POS = float3(2.0f * 50.0f, 0.25f * 50.0f, 2.5f * 50.0f);
 static const float3 LIGHT_COL = float3(1.0f, 1.0f, 1.0f);
 
 static const float3 PLANE_COL = float3(0.7f, 0.7f, 0.3f);
 
 static const float AMBIENT_FACTOR = 0.3f;
 
-static const float MIX_FACTOR = 0.6f;
+static const float MIX_FACTOR = 0.3f;
 
 static const float3 SKY_COL = float3(0.0f, 0.2f, 0.7f);
 
@@ -52,3 +54,10 @@ static const float MIN_SECONDARY_RAY_T = 0.00001f;
 // TMin = 0.00001f - for set resolution (1280x720) virtually no "pass through" bands visible with no visible artifacts
 
 #define NUM_REFLECTIONS 5
+
+float2 DirectionToSpherical(float3 dir)
+{
+    float theta = acos(dir.y) / (PI);
+    float phi = atan2(dir.x, dir.z) / (PI * 2.0f) + 0.5f;
+    return float2(phi, theta);
+}

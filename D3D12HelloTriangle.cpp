@@ -22,6 +22,8 @@
 #include "Windowsx.h"
 
 #include "MeshDataUtility.h"
+#include "ResourceUploadBatch.h"
+#include "WICTextureLoader.h"
 
 #include <stdexcept>
 
@@ -36,6 +38,7 @@ D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height, std::wstring nam
 
 void D3D12HelloTriangle::OnInit()
 {
+
 	nv_helpers_dx12::CameraManip.setWindowSize(GetWidth(), GetHeight());
 	nv_helpers_dx12::CameraManip.setLookat(glm::vec3(1.5f, 1.5f, 1.5f), glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f));
 
@@ -306,6 +309,8 @@ void D3D12HelloTriangle::LoadAssets()
 						  MeshDataUtility::TetrahedronIndices, m_tetrahedronIndexBuffer, m_tetrahedronIndexBufferView);
 		CreateMeshBuffers(MeshDataUtility::PlaneVertices, m_planeVertexBuffer, m_planeVertexBufferView,
 						  MeshDataUtility::PlaneIndices, m_planeIndexBuffer, m_planeIndexBufferView);
+		CreateSkyboxTextureBuffer();
+
 	}
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
@@ -461,7 +466,7 @@ void D3D12HelloTriangle::PopulateCommandList()
 		// Bind the descriptor heap giving access to the top-level acceleration
 		// structure, as well as the raytracing output
 		// #DXR Extra: Perspective Camera - additional camera info
-		std::vector<ID3D12DescriptorHeap*> heaps = { m_srvUavHeap.Get() };
+		std::vector<ID3D12DescriptorHeap*> heaps = { m_srvUavHeap.Get(), m_samplerHeap.Get() };
 		m_commandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 		// On the last frame, the raytracing output was used as a copy source, to
@@ -775,7 +780,7 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateRayGenSignature()
 		  D3D12_DESCRIPTOR_RANGE_TYPE_UAV /* UAV representing the output buffer*/,
 		  0 /*heap slot where the UAV is defined*/},
 		 {0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV /*Top-level acceleration structure*/, 1},
-		 {0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera Parameters*/, 2}
+		 {0 /*b0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_CBV /*Camera Parameters*/, 3}
 		});
 
 	return rsc.Generate(m_device.Get(), true);
@@ -792,7 +797,11 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature()
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 0);
 	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_SRV, 1);
 	rsc.AddHeapRangesParameter({
-		{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 /*2nd slot of the heap*/}
+		{2 /*t2*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1 /*2nd slot of the heap*/},
+	 	{3 /*t3*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2 /*3rd slot of the heap*/}
+		});
+	rsc.AddHeapRangesParameter({
+		{0 /*s0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 0 /*1st slot of the sampler heap*/}
 		});
 
 	// #DXR Extra: Per-Instance Data
@@ -815,6 +824,12 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateHitSignature()
 ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateMissSignature()
 {
 	nv_helpers_dx12::RootSignatureGenerator rsc;
+	rsc.AddHeapRangesParameter({
+		{0 /*t0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 2}
+		});
+	rsc.AddHeapRangesParameter({
+		{0 /*s0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 0 /*1st slot of the sampler heap*/}
+		});
 	return rsc.Generate(m_device.Get(), true);
 }
 
@@ -842,8 +857,10 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	m_shadowSignature = CreateHitSignature();
 
 	// #DXR Custom: Reflections
-	m_reflectionLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ReflectionRay.hlsl");
-	pipeline.AddLibrary(m_reflectionLibrary.Get(), {L"ReflectionClosestHit", L"ReflectionMiss"});
+	m_reflectionHitLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ReflectionRay.hlsl");
+	m_reflectionMissLibrary = nv_helpers_dx12::CompileShaderLibrary(L"ReflectionMiss.hlsl");
+	pipeline.AddLibrary(m_reflectionHitLibrary.Get(), {L"ReflectionClosestHit"});
+	pipeline.AddLibrary(m_reflectionMissLibrary.Get(), {L"ReflectionMiss"});
 	m_reflectionSignature = CreateHitSignature();
 
 	// In a way similar to DLLs, each library is associated with a number of
@@ -977,7 +994,7 @@ void D3D12HelloTriangle::CreateShaderResourceHeap()
 	// Create a SRV/UAV/CBV descriptor heap. We need 3 entries - 1 SRV for the TLAS, 1 UAV for the
 	// raytracing output and 1 CBV for the camera matrices
 	m_srvUavHeap = nv_helpers_dx12::CreateDescriptorHeap(
-		m_device.Get(), 3, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true);
+		m_device.Get(), 4, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, true); //Add texture (4th slot)
 
 
 	// Get a handle to the heap memory on the CPU side, to be able to write the
@@ -1003,6 +1020,15 @@ void D3D12HelloTriangle::CreateShaderResourceHeap()
 	// Write the acceleration structure view in the heap
 	m_device->CreateShaderResourceView(nullptr, &srvDesc, srvHandle);
 
+	// Create SRV for skybox texture
+	srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
+	D3D12_SHADER_RESOURCE_VIEW_DESC texDesc = {};
+	texDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+	texDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+	texDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+	texDesc.Texture2D.MipLevels = 1;
+	m_device->CreateShaderResourceView(m_skyboxTextureBuffer.Get(), &texDesc, srvHandle);
+
 	// #DXR Extra: Perspective Camera
 	// Add the constant buffer for the camera after the TLAS
 	srvHandle.ptr += m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
@@ -1012,6 +1038,24 @@ void D3D12HelloTriangle::CreateShaderResourceHeap()
 	cbvDesc.BufferLocation = m_cameraBuffer->GetGPUVirtualAddress();
 	cbvDesc.SizeInBytes = m_cameraBufferSize;
 	m_device->CreateConstantBufferView(&cbvDesc, srvHandle);
+
+	m_samplerHeap = nv_helpers_dx12::CreateDescriptorHeap(m_device.Get(), 1, D3D12_DESCRIPTOR_HEAP_TYPE_SAMPLER, true);
+
+	D3D12_CPU_DESCRIPTOR_HANDLE samplerHeapHandle = m_samplerHeap->GetCPUDescriptorHandleForHeapStart();
+
+	D3D12_SAMPLER_DESC sampler = {};
+	sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+	sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+	sampler.MipLODBias = 0;
+	sampler.MaxAnisotropy = 0;
+	sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+	sampler.BorderColor[0] = sampler.BorderColor[1] = sampler.BorderColor[2] = sampler.BorderColor[3] = 0.0f;
+	sampler.MinLOD = 0.0f;
+	sampler.MaxLOD = D3D12_FLOAT32_MAX;
+
+	m_device->CreateSampler(&sampler, samplerHeapHandle);
 }
 
 /// <summary>
@@ -1032,25 +1076,27 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 	// shaders without root parameters
 	D3D12_GPU_DESCRIPTOR_HANDLE srvUavHeapHandle =
 		m_srvUavHeap->GetGPUDescriptorHandleForHeapStart();
-
+	D3D12_GPU_DESCRIPTOR_HANDLE samplerHeapHandle =
+		m_samplerHeap->GetGPUDescriptorHandleForHeapStart();
 	// The helper treats both root parameter pointers and heap pointers as void*,
 	// while DX12 uses the D3D12_GPU_DESCRIPTOR_HANDLE to define heap pointers. 
 	// The pointer in this struct is a UINT64, which then has to be reinterpreted
 	// as a pointer.
 	auto heapPointer = reinterpret_cast<void*>(srvUavHeapHandle.ptr);
+	auto samplerHeapPointer = reinterpret_cast<void*>(samplerHeapHandle.ptr);
 
 	// The ray generation only uses heap data
 	m_sbtHelper.AddRayGenerationProgram(L"RayGen", { heapPointer });
 
 	// The miss and hit shaders do not access any external resources: instead they
 	// communicate their results through the ray payload
-	m_sbtHelper.AddMissProgram(L"Miss", {});
+	m_sbtHelper.AddMissProgram(L"Miss", {heapPointer, samplerHeapPointer});
 
 	// #DXR Extra: Another Ray Type
 	m_sbtHelper.AddMissProgram(L"ShadowMiss", {});
 
 	// #DXR Custom: Reflections
-	m_sbtHelper.AddMissProgram(L"ReflectionMiss", {});
+	m_sbtHelper.AddMissProgram(L"ReflectionMiss", {heapPointer, samplerHeapPointer});
 
 	// Adding the triangle hit shader
 	//m_sbtHelper.AddHitGroup(L"HitGroup", {(void*)(m_vertexBuffer->GetGPUVirtualAddress())});
@@ -1069,6 +1115,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 				(void*)(m_tetrahedronVertexBuffer->GetGPUVirtualAddress()),
 				(void*)(m_tetrahedronIndexBuffer->GetGPUVirtualAddress()),
 				heapPointer,
+				samplerHeapPointer,
 				(void*)(m_perInstanceConstantBuffers[i]->GetGPUVirtualAddress())
 			}
 		);
@@ -1078,6 +1125,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 				(void*)(m_tetrahedronVertexBuffer->GetGPUVirtualAddress()),
 				(void*)(m_tetrahedronIndexBuffer->GetGPUVirtualAddress()),
 				heapPointer,
+				samplerHeapPointer,
 				(void*)(m_perInstanceConstantBuffers[i]->GetGPUVirtualAddress())
 			}
 		);
@@ -1091,7 +1139,8 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 		{
 			(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Directional Shadows
 			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Indexed Plane
-			heapPointer
+			heapPointer,
+			samplerHeapPointer,
 		}
 	); // #DXR Extra: Another Ray Type (add heap pointer)
 	m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
@@ -1101,7 +1150,8 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 		{
 			(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()),
 			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()),
-			heapPointer
+			heapPointer,
+			samplerHeapPointer
 		}
 	);
 
@@ -1430,5 +1480,22 @@ void D3D12HelloTriangle::CreateMeshBuffers(
 	indexBufferView.BufferLocation = indexBuffer->GetGPUVirtualAddress();
 	indexBufferView.Format = DXGI_FORMAT_R32_UINT;
 	indexBufferView.SizeInBytes = indexBufferSize;
+}
+
+void D3D12HelloTriangle::CreateSkyboxTextureBuffer()
+{
+	// Debug (check format)
+	//TexMetadata textureMetaData;
+	//ThrowIfFailed(LoadFromWICFile(L"cape_hill.jpg", WIC_FLAGS_NONE, &textureMetaData, *m_skyboxTexture));
+
+	ResourceUploadBatch upload(m_device.Get());
+
+	upload.Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
+
+	ThrowIfFailed(CreateWICTextureFromFile(m_device.Get(), upload, L"cape_hill.jpg", &m_skyboxTextureBuffer, false));
+
+	auto uploadResourcesFinished = upload.End(m_commandQueue.Get());
+
+	uploadResourcesFinished.wait();
 }
 
