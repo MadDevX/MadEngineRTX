@@ -27,6 +27,8 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
     float3 v2 = mul(objectToWorld, BTriVertex[indices[vertId + 1]].vertex);
     float3 v3 = mul(objectToWorld, BTriVertex[indices[vertId + 2]].vertex);
     
+    float minTMult = length(v2 - v3);
+    
     float3 normal = normalize(cross((v2 - v3), (v1 - v2)));
     if (dot(normal, WorldRayDirection()) > 0.0f)
     {
@@ -46,7 +48,7 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
     RayDesc ray;
     ray.Origin = worldOrigin;
     ray.Direction = lightDir;
-    ray.TMin = MIN_SECONDARY_RAY_T;
+    ray.TMin = clamp(MIN_SECONDARY_RAY_T * minTMult, MIN_SECONDARY_RAY_T, MIN_SECONDARY_RAY_T_MAX_VALUE);
     ray.TMax = distToLight;
     bool hit = true;
     
@@ -93,9 +95,9 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
                          BTriVertex[indices[vertId + 2]].color * barycentrics.z;
     
     // #DXR Custom: Simple Lighting
-    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR) * objectColor;
+    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR * LIGHT_COL) * objectColor;
     
 	
     payload.colorAndDistance = float4(hitColor, RayTCurrent());
-    payload.normalAndIsHit = float4(normal, 1.0f);
+    payload.normalAndIsHit = float4(normal, minTMult);
 }

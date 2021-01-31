@@ -745,7 +745,7 @@ void D3D12HelloTriangle::CreateAccelerationStructures()
 		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(45.0f)) * XMMatrixTranslation(1.0f, 0.0f, 1.0f)},
 		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-1.0f, 0.0f, 1.0f)},
 		// #DXR Extra: Per-Instance Data
-		{planeBottomLevelBuffers.pResult, XMMatrixScaling(1.0f, 1.0f, 1.0f) * XMMatrixTranslation(0.0f, 0.0f, 0.0f)}
+		{planeBottomLevelBuffers.pResult, XMMatrixScaling(10000.0f, 10000.0f, 10000.0f) * XMMatrixTranslation(0.0f, -0.8f, 0.0f)}
 	};
 	CreateTopLevelAS(m_instances);
 

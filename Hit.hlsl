@@ -47,6 +47,8 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float3 v2 = mul(objectToWorld, BTriVertex[indices[vertId + 1]].vertex);
     float3 v3 = mul(objectToWorld, BTriVertex[indices[vertId + 2]].vertex);
     
+    float minTMult = length(v2 - v3);
+    
     // #DXR Custom: Directional Shadows for tetrahedron
     float3 normal = normalize(cross((v2 - v3), (v1 - v2)));
     if (dot(normal, WorldRayDirection()) > 0.0f)
@@ -72,7 +74,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     RayDesc ray;
     ray.Origin = worldOrigin;
     ray.Direction = lightDir;
-    ray.TMin = MIN_SECONDARY_RAY_T;
+    ray.TMin = clamp(MIN_SECONDARY_RAY_T * minTMult, MIN_SECONDARY_RAY_T, MIN_SECONDARY_RAY_T_MAX_VALUE);
     ray.TMax = distToLight;
     bool hit = true;
     
@@ -115,6 +117,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     float3 currentPosition = worldOrigin;
     float3 currentDirection = WorldRayDirection();
     float3 currentNormal = normal;
+    float currentMinTMult = minTMult;
     
     ReflectionHitInfo reflectionPayloads[NUM_REFLECTIONS];
     int lastValidReflection = 0;
@@ -125,7 +128,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         // Fire a reflection ray.
         ray.Origin = currentPosition;
         ray.Direction = currentDirection;
-        ray.TMin = MIN_SECONDARY_RAY_T;
+        ray.TMin = clamp(MIN_SECONDARY_RAY_T * currentMinTMult, MIN_SECONDARY_RAY_T, MIN_SECONDARY_RAY_T_MAX_VALUE);
         ray.TMax = MAX_RAY_T;
     
         // Initialize the ray payload
@@ -147,6 +150,10 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         if (reflectionPayloads[i].normalAndIsHit.w == 0.0f)
         {
             break;
+        }
+        else
+        {
+            currentMinTMult = reflectionPayloads[i].normalAndIsHit.w;
         }
         
         currentPosition += currentDirection * reflectionPayloads[i].colorAndDistance.w;
@@ -185,7 +192,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
                          BTriVertex[indices[vertId + 2]].color * barycentrics.z;
     
     // #DXR Custom: Simple Lighting
-    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR) * objectColor;
+    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR * LIGHT_COL) * objectColor;
     float3 reflColor = /*MIX_FACTOR * */reflectionPayloads[lastValidReflection].colorAndDistance.xyz /*+ (1.0f - MIX_FACTOR) * SKY_COL*/;
     
     for (i = lastValidReflection - 1; i >= 0; i--)
