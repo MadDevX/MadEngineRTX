@@ -61,7 +61,7 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
     // Acceleration structure
     SceneBVH,
     // Flags can be used to specify the behavior upon hitting a surface
-    RAY_FLAG_NONE,
+    DEFAULT_RAY_FLAG,
     // Instance inclusion mask
     0xFF,
     // Depending on the type of ray, a given object can have several hit

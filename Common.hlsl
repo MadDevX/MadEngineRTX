@@ -60,7 +60,9 @@ static const float MIN_SECONDARY_RAY_T_MAX_VALUE = 0.01f;
 // Thus, multipliers are required to minimize visible artifacts - but even multiplied minT must be less than a set value, otherwise interaction of large geometry with small geometry 
 // causes pass-through bands visible in specular reflections (scale mismatch)
 
-#define NUM_REFLECTIONS 20
+#define NUM_REFLECTIONS 10
+
+#define DEFAULT_RAY_FLAG RAY_FLAG_CULL_FRONT_FACING_TRIANGLES
 
 float2 DirectionToSpherical(float3 dir)
 {

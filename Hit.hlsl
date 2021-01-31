@@ -87,7 +87,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     // Acceleration structure
     SceneBVH,
     // Flags can be used to specify the behavior upon hitting a surface
-    RAY_FLAG_NONE,
+    DEFAULT_RAY_FLAG,
     // Instance inclusion mask
     0xFF,
     // Depending on the type of ray, a given object can have several hit
@@ -138,7 +138,7 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         // Trace the ray
         TraceRay(
             SceneBVH, // Acceleration structure
-            RAY_FLAG_NONE, // Flags 
+            DEFAULT_RAY_FLAG, // Flags 
             0xFF, // Instance inclusion mask: include all
             2, // Hit group offset : reflection hit group
             0, // SBT offset
