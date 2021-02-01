@@ -22,10 +22,12 @@
 #include "Windowsx.h"
 
 #include "MeshDataUtility.h"
+#include "MaterialTypes.h"
 #include "ResourceUploadBatch.h"
 #include "WICTextureLoader.h"
 
 #include <stdexcept>
+#include <random>
 
 D3D12HelloTriangle::D3D12HelloTriangle(UINT width, UINT height, std::wstring name) :
 	DXSample(width, height, name),
@@ -453,6 +455,8 @@ void D3D12HelloTriangle::PopulateCommandList()
 	}
 	else
 	{
+		std::vector<ID3D12DescriptorHeap*> heaps = { m_srvUavHeap.Get(), m_samplerHeap.Get() };
+		m_commandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 		// #DXR Extra: Refitting
 		// Refit the top-level acceleration structure to account for the new transform matrix of the
 		// triangle. Note that the build contains a barrier, hence we can do the rendering in the
@@ -466,8 +470,6 @@ void D3D12HelloTriangle::PopulateCommandList()
 		// Bind the descriptor heap giving access to the top-level acceleration
 		// structure, as well as the raytracing output
 		// #DXR Extra: Perspective Camera - additional camera info
-		std::vector<ID3D12DescriptorHeap*> heaps = { m_srvUavHeap.Get(), m_samplerHeap.Get() };
-		m_commandList->SetDescriptorHeaps(static_cast<UINT>(heaps.size()), heaps.data());
 
 		// On the last frame, the raytracing output was used as a copy source, to
 		// copy its contents into the render target. Now we need to transition it to
@@ -744,8 +746,13 @@ void D3D12HelloTriangle::CreateAccelerationStructures()
 		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-135.0f)) * XMMatrixTranslation(-1.0f, 0.0f, -1.0f)},
 		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(45.0f)) * XMMatrixTranslation(1.0f, 0.0f, 1.0f)},
 		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-1.0f, 0.0f, 1.0f)},
+		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-2.0f, 0.0f, -2.0f)},
+		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-2.0f, 0.0f,  2.0f)},
+		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation( 2.0f, 0.0f,  2.0f)},
+		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation( 2.0f, 0.0f, -2.0f)},
+		// for some reason adding another entry to m_instances causes crash in the next UpdateCameraBuffer() call (line containing m_cameraBuffer->Map)
 		// #DXR Extra: Per-Instance Data
-		{planeBottomLevelBuffers.pResult, XMMatrixScaling(10000.0f, 10000.0f, 10000.0f) * XMMatrixTranslation(0.0f, -0.8f, 0.0f)}
+		{planeBottomLevelBuffers.pResult, XMMatrixScaling(1000.0f, 1000.0f, 1000.0f) * XMMatrixTranslation(0.0f, -0.8f, 0.0f)}
 	};
 	CreateTopLevelAS(m_instances);
 
@@ -929,7 +936,7 @@ void D3D12HelloTriangle::CreateRaytracingPipeline()
 	// exchanged between shaders, such as the HitInfo structure in the HLSL code.
 	// It is important to keep this value as low as possible as a too high value
 	// would result in unnecessary memory consumption and cache trashing.
-	pipeline.SetMaxPayloadSize(8 * sizeof(float)); // RGB + distance  // #DXR Custom: reflections and normal + isHit
+	pipeline.SetMaxPayloadSize(12 * sizeof(float)); // RGB + distance  // #DXR Custom: reflections and normal + isHit
 
 	// Upon hitting a surface, DXR can provide several attributes to the hit. In
 	// our sample we just use the barycentric coordinates defined by the weights
@@ -1141,6 +1148,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Indexed Plane
 			heapPointer,
 			samplerHeapPointer,
+			(void*)(m_perInstanceConstantBuffers[m_instances.size() - 1]->GetGPUVirtualAddress())
 		}
 	); // #DXR Extra: Another Ray Type (add heap pointer)
 	m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
@@ -1151,7 +1159,8 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 			(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()),
 			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()),
 			heapPointer,
-			samplerHeapPointer
+			samplerHeapPointer,
+			(void*)(m_perInstanceConstantBuffers[m_instances.size() - 1]->GetGPUVirtualAddress())
 		}
 	);
 
@@ -1327,39 +1336,43 @@ void D3D12HelloTriangle::CreatePerInstanceConstantBuffers()
 {
 	// Due to HLSL packing rules, we create the CB with 9 float4 (each needs to start on a 16-byte
 	// boundary)
-	XMVECTOR bufferData[] = 
+	std::random_device r;
+	std::default_random_engine el(r());
+	std::uniform_real_distribution<float> uniform_dist(0.0f, 1.0f);
+
+	//Material{XMVECTOR{0.8f, 0.8f, 0.8f}, XMVECTOR{0.08f, 0.08f, 0.08f}},
+	int instanceCount = static_cast<int>(m_instances.size());
+	Material* bufferData = new Material[instanceCount];
+	for (int i = 0; i < instanceCount - 1; i++)
 	{
-		// A
-		XMVECTOR{1.0f, 0.0f, 0.0f, 1.0f},
-		XMVECTOR{1.0f, 0.4f, 0.0f, 1.0f},
-		XMVECTOR{1.f, 0.7f, 0.0f, 1.0f},
+		bool isMetal = (uniform_dist(el)) > 0.5f;
+		float r = uniform_dist(el);
+		float g = uniform_dist(el);
+		float b = uniform_dist(el);
+		XMVECTOR albedo = isMetal ? XMVECTOR{ 0.0f, 0.0f, 0.0f, 1.0f} : XMVECTOR{ r, g, b, 1.0f };
+		XMVECTOR specular = isMetal ? XMVECTOR{ r, g, b, 1.0f } : XMVECTOR{ 0.04f, 0.04f, 0.04f, 1.0f };
+		
+		bufferData[i] = Material{ albedo, specular };
+	}
+	bufferData[instanceCount-1] = Material{ XMVECTOR{ 0.8f, 0.8f, 0.8f }, XMVECTOR{ 0.04f, 0.04f, 0.04f } };
 
-		// B
-		XMVECTOR{0.0f, 1.0f, 0.0f, 1.0f},
-		XMVECTOR{0.0f, 1.0f, 0.4f, 1.0f},
-		XMVECTOR{0.0f, 1.0f, 0.7f, 1.0f},
-
-		// C
-		XMVECTOR{0.0f, 0.0f, 1.0f, 1.0f},
-		XMVECTOR{0.4f, 0.0f, 1.0f, 1.0f},
-		XMVECTOR{0.7f, 0.0f, 1.0f, 1.0f},
-	};
-
-	m_perInstanceConstantBuffers.resize(m_instances.size() - 1);
+	m_perInstanceConstantBuffers.resize(instanceCount);
 	int i(0);
 	for (auto& cb : m_perInstanceConstantBuffers)
 	{
-		const uint32_t bufferSize = sizeof(XMVECTOR) * 3;
+		const uint32_t bufferSize = sizeof(Material);
 		cb = nv_helpers_dx12::CreateBuffer(
 			m_device.Get(), bufferSize, D3D12_RESOURCE_FLAG_NONE,
 			D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
 
 		uint8_t* pData;
 		ThrowIfFailed(cb->Map(0, nullptr, (void**)&pData));
-		memcpy(pData, &bufferData[(i%3) * 3], bufferSize); // %3 because there are only 3 entries in buffer data (A, B, C)
+		memcpy(pData, &bufferData[i], bufferSize);
 		cb->Unmap(0, nullptr);
 		i++;
 	}
+
+	delete[] bufferData;
 }
 
 // #DXR Extra: Depth Buffering

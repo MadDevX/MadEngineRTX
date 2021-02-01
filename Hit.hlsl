@@ -20,9 +20,7 @@ cbuffer Colors : register(b0)
     //MyStructColor Tint[3];
     
     // #DXR Extra: Per-Instance Data (Per-Instance Constant Buffer)
-    float3 A;
-    float3 B;
-    float3 C;
+    Material mat;
 }
 
 
@@ -33,6 +31,8 @@ StructuredBuffer<int> indices : register(t1);
 // Raytracing acceleration structure, accessed as a SRV
 RaytracingAccelerationStructure SceneBVH : register(t2);
 
+
+//LEGACY SHADER - no longer used by main RayGen shader
 [shader("closesthit")] 
 void ClosestHit(inout HitInfo payload, Attributes attrib) 
 {
@@ -113,13 +113,18 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     // between the hit/miss shaders and the raygen
     shadowPayload);
     
-        
+    
+    float3 currentRayEnergy = float3(1.0f, 1.0f, 1.0f);
+    float3 resultColor = float3(0.0f, 0.0f, 0.0f);
     float3 currentPosition = worldOrigin;
     float3 currentDirection = WorldRayDirection();
     float3 currentNormal = normal;
     float currentMinTMult = minTMult;
     
-    ReflectionHitInfo reflectionPayloads[NUM_REFLECTIONS];
+    resultColor += currentRayEnergy * (0.0f, 0.0f, 0.0f);
+    currentRayEnergy *= mat.specular;
+    
+    ReflectionHitInfo reflectionPayload;
     int lastValidReflection = 0;
     int i;
     for (i = 0; i < NUM_REFLECTIONS; i++)
@@ -132,8 +137,9 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
         ray.TMax = MAX_RAY_T;
     
         // Initialize the ray payload
-        reflectionPayloads[i].colorAndDistance = float4(0.0f, 0.0f, 0.0f, 0.0f);
-        reflectionPayloads[i].normalAndIsHit = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        reflectionPayload.colorAndDistance = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        reflectionPayload.normalAndIsHit = float4(0.0f, 0.0f, 0.0f, 0.0f);
+        reflectionPayload.rayEnergy = float4(currentRayEnergy, 1.0f);
     
         // Trace the ray
         TraceRay(
@@ -144,20 +150,24 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
             0, // SBT offset
             2, // Index of the miss shader: reflection miss shader
             ray, // Ray information to trace
-            reflectionPayloads[i]); // Payload
+            reflectionPayload); // Payload
+        
+        resultColor += currentRayEnergy * reflectionPayload.colorAndDistance.rgb;
+        currentRayEnergy = reflectionPayload.rayEnergy.rgb;
         
         lastValidReflection = i;
-        if (reflectionPayloads[i].normalAndIsHit.w == 0.0f)
+        if (reflectionPayload.normalAndIsHit.w == 0.0f)
         {
             break;
         }
         else
         {
-            currentMinTMult = reflectionPayloads[i].normalAndIsHit.w;
+            currentMinTMult = reflectionPayload.normalAndIsHit.w;
         }
         
-        currentPosition += currentDirection * reflectionPayloads[i].colorAndDistance.w;
-        currentNormal = reflectionPayloads[i].normalAndIsHit.xyz;
+        currentPosition += currentDirection * reflectionPayload.colorAndDistance.w;
+        currentNormal = reflectionPayload.normalAndIsHit.xyz;
+        
     }
     
     // #DXR Custom: Directional Shadows
@@ -193,13 +203,13 @@ void ClosestHit(inout HitInfo payload, Attributes attrib)
     
     // #DXR Custom: Simple Lighting
     float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR * LIGHT_COL) * objectColor;
-    float3 reflColor = /*MIX_FACTOR * */reflectionPayloads[lastValidReflection].colorAndDistance.xyz /*+ (1.0f - MIX_FACTOR) * SKY_COL*/;
+    //float3 reflColor = /*MIX_FACTOR * */reflectionPayloads[lastValidReflection].colorAndDistance.xyz /*+ (1.0f - MIX_FACTOR) * SKY_COL*/;
     
-    for (i = lastValidReflection - 1; i >= 0; i--)
-    {
-        reflColor = MIX_FACTOR * reflectionPayloads[i].colorAndDistance.xyz + (1.0f - MIX_FACTOR) * reflColor;
-    }
+    //for (i = lastValidReflection - 1; i >= 0; i--)
+    //{
+    //    reflColor = MIX_FACTOR * reflectionPayloads[i].colorAndDistance.xyz + (1.0f - MIX_FACTOR) * reflColor;
+    //}
     
-    hitColor = MIX_FACTOR * hitColor + (1.0f - MIX_FACTOR) * reflColor;
-	payload.colorAndDistance = float4(hitColor, RayTCurrent());
+    //hitColor = MIX_FACTOR * hitColor + (1.0f - MIX_FACTOR) * reflColor;
+	payload.colorAndDistance = float4(resultColor, RayTCurrent());
 }

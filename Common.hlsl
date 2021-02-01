@@ -26,6 +26,7 @@ struct ReflectionHitInfo
     //Currently "IsHit" is also used to store triangle side length (assumed that all triangle sides have length of the same order of magnitude)
     //This may be used as a multiplier for minRayT of reflected rays in iterative approach
     float4 normalAndIsHit; 
+    float4 rayEnergy;
 };
 
 struct STriVertex
@@ -34,18 +35,27 @@ struct STriVertex
     float4 color;
 };
 
+
+struct Material
+{
+    float3 albedo;
+    float3 specular;
+};
+
 static const float PI = 3.14159265f;
 
 static const float3 LIGHT_POS = float3(2.0f, 0.25f, 2.5f) * 50000.0f;
+static const float3 LIGHT_DIR = normalize(float3(-1.0f, -1.0f, -1.0f));
 static const float3 LIGHT_COL = float3(1.0f, 1.0f, 1.0f);
 
 static const float3 PLANE_COL = float3(0.7f, 0.7f, 0.3f);
 
-static const float AMBIENT_FACTOR = 0.3f;
+static const float AMBIENT_FACTOR = 0.2f;
 
 static const float MIX_FACTOR = 0.1f;
 
 static const float3 SKY_COL = float3(0.0f, 0.2f, 0.7f);
+static const float SKY_INTENSITY = 1.8f;
 
 static const float MAX_RAY_T = 100000.0f;
 

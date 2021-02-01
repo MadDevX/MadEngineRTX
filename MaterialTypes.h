@@ -6,6 +6,6 @@ using namespace DirectX;
 
 struct Material
 {
-	XMFLOAT4 albedo;
-	XMFLOAT4 specularReflection;
+	XMVECTOR albedo;
+	XMVECTOR specularReflection;
 };

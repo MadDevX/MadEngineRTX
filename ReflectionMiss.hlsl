@@ -12,4 +12,5 @@ void ReflectionMiss(inout ReflectionHitInfo hit : SV_RayPayload)
     
     hit.colorAndDistance = float4(col, -1.0f);
     hit.normalAndIsHit = float4(0.0f, 0.0f, 0.0f, 0.0f);
+    hit.rayEnergy = float4(0.0f, 0.0f, 0.0f, 0.0f);
 }

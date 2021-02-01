@@ -3,10 +3,9 @@
 // #DXR Custom: Reflections
 cbuffer Colors : register(b0)
 {
-    float3 A;
-    float3 B;
-    float3 C;
+    Material mat;
 }
+
 StructuredBuffer<STriVertex> BTriVertex : register(t0);
 StructuredBuffer<int> indices : register(t1);
 
@@ -39,7 +38,8 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
     
     float3 vectToLight = LIGHT_POS - worldOrigin;
     float3 distToLight = length(vectToLight);
-    float3 lightDir = normalize(vectToLight);
+    //float3 lightDir = normalize(vectToLight);
+    float3 lightDir = -LIGHT_DIR;
     
     // #DXR Custom: Simple Lighting
     float diff = max(dot(normal, lightDir), 0.0f);
@@ -49,7 +49,7 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
     ray.Origin = worldOrigin;
     ray.Direction = lightDir;
     ray.TMin = clamp(MIN_SECONDARY_RAY_T * minTMult, MIN_SECONDARY_RAY_T, MIN_SECONDARY_RAY_T_MAX_VALUE);
-    ray.TMax = distToLight;
+    ray.TMax = MAX_RAY_T; //distToLight;
     bool hit = true;
     
     // Initialize the ray payload
@@ -95,9 +95,10 @@ void ReflectionClosestHit(inout ReflectionHitInfo payload, Attributes attrib)
                          BTriVertex[indices[vertId + 2]].color * barycentrics.z;
     
     // #DXR Custom: Simple Lighting
-    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR * LIGHT_COL) * objectColor;
+    float3 hitColor = (diffFactor * diffuse + AMBIENT_FACTOR * LIGHT_COL) * /*objectColor*/mat.albedo;
     
 	
-    payload.colorAndDistance = float4(hitColor, RayTCurrent());
+    payload.colorAndDistance = float4(saturate(hitColor), RayTCurrent());
     payload.normalAndIsHit = float4(normal, minTMult);
+    payload.rayEnergy = float4(payload.rayEnergy.rgb * mat.specular, 1.0f);
 }
