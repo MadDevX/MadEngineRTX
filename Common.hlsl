@@ -55,7 +55,7 @@ static const float AMBIENT_FACTOR = 0.2f;
 static const float MIX_FACTOR = 0.1f;
 
 static const float3 SKY_COL = float3(0.0f, 0.2f, 0.7f);
-static const float SKY_INTENSITY = 1.8f;
+static const float SKY_INTENSITY = 1.0f;
 
 static const float MAX_RAY_T = 100000.0f;
 

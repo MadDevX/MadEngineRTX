@@ -88,7 +88,7 @@ void D3D12HelloTriangle::OnInit()
 	// are invoked for each instance in the AS
 	CreateShaderBindingTable();
 
-	std::wstring windowText = L"DXR Demo: RTX OFF";
+	std::wstring windowText = m_raster == true ? L"DXR Demo: RTX OFF" : L"DXR Demo: RTX ON";
 	SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
 }
 
@@ -346,10 +346,13 @@ void D3D12HelloTriangle::OnUpdate()
 	// Increment the time counter at each frame, and update the corresponding instance matrix of the
 	// first triangle to animate its position
 	m_time++;
-	m_instances[0].second =
-		XMMatrixScaling(0.5f, 0.5f, 0.5f) *
-		XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_time) / 50.0f) *
-		XMMatrixTranslation(0.0f, 0.1f * cosf(m_time / 20.0f), 0.0f);
+	if (m_instances.size() > 1)
+	{
+		m_instances[0].second =
+			XMMatrixScaling(0.5f, 0.5f, 0.5f) *
+			XMMatrixRotationAxis({ 0.0f, 1.0f, 0.0f }, static_cast<float>(m_time) / 50.0f) *
+			XMMatrixTranslation(0.0f, 0.1f * cosf(m_time / 20.0f), 0.0f);
+	}
 
 }
 
@@ -448,10 +451,13 @@ void D3D12HelloTriangle::PopulateCommandList()
 
 		// #DXR Extra: Per-Instance Data
 		// In a way similar to triangle rendering, rasterize the plane
-		m_commandList->SetGraphicsRoot32BitConstant(2, static_cast<UINT>(m_instances.size()-1), 0);
-		m_commandList->IASetVertexBuffers(0, 1, &m_planeVertexBufferView);
-		m_commandList->IASetIndexBuffer(&m_planeIndexBufferView);
-		m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		if (m_instances.size() > 0)
+		{
+			m_commandList->SetGraphicsRoot32BitConstant(2, static_cast<UINT>(m_instances.size() - 1), 0);
+			m_commandList->IASetVertexBuffers(0, 1, &m_planeVertexBufferView);
+			m_commandList->IASetIndexBuffer(&m_planeIndexBufferView);
+			m_commandList->DrawIndexedInstanced(6, 1, 0, 0, 0);
+		}
 	}
 	else
 	{
@@ -741,18 +747,19 @@ void D3D12HelloTriangle::CreateAccelerationStructures()
 		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f)},
 		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.25f, 0.25f, 0.25f) * XMMatrixTranslation(1.0f, 1.0f, -1.0f)},
 		//{bottomLevelBuffers.pResult, XMMatrixScaling(5.0f, 5.0f, 5.0f) * XMMatrixTranslation(-5.0f, -5.0f, 5.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(135.0f)) * XMMatrixTranslation(1.0f, 0.0f, -1.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-135.0f)) * XMMatrixTranslation(-1.0f, 0.0f, -1.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(45.0f)) * XMMatrixTranslation(1.0f, 0.0f, 1.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-1.0f, 0.0f, 1.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-2.0f, 0.0f, -2.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-2.0f, 0.0f,  2.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation( 2.0f, 0.0f,  2.0f)},
-		{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation( 2.0f, 0.0f, -2.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(135.0f)) * XMMatrixTranslation(1.0f, 0.0f, -1.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-135.0f)) * XMMatrixTranslation(-1.0f, 0.0f, -1.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(45.0f)) * XMMatrixTranslation(1.0f, 0.0f, 1.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-1.0f, 0.0f, 1.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-2.0f, 0.0f, -2.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation(-2.0f, 0.0f,  2.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation( 2.0f, 0.0f,  2.0f)},
+		//{bottomLevelBuffers.pResult, XMMatrixScaling(0.5f, 0.5f, 0.5f) * XMMatrixRotationAxis(XMVECTOR{0.0f, 1.0f, 0.0f}, XMConvertToRadians(-45.0f)) * XMMatrixTranslation( 2.0f, 0.0f, -2.0f)},
 		// for some reason adding another entry to m_instances causes crash in the next UpdateCameraBuffer() call (line containing m_cameraBuffer->Map)
 		// #DXR Extra: Per-Instance Data
-		{planeBottomLevelBuffers.pResult, XMMatrixScaling(1000.0f, 1000.0f, 1000.0f) * XMMatrixTranslation(0.0f, -0.8f, 0.0f)}
+		//if it ain't broke, don't fix it
+		{planeBottomLevelBuffers.pResult, XMMatrixScaling(0.0f, 0.0f, 0.0f) * XMMatrixTranslation(0.0f, -0.8f, 0.0f)}
 	};
 	CreateTopLevelAS(m_instances);
 
@@ -1142,27 +1149,30 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 	//m_sbtHelper.AddHitGroup(L"HitGroup", { (void*)(m_perInstanceConstantBuffers[0]->GetGPUVirtualAddress()) });
 
 	// #DXR Extra: Per-Instance Data (Plane)
-	m_sbtHelper.AddHitGroup(L"HitGroup", 
-		{
-			(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Directional Shadows
-			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Indexed Plane
-			heapPointer,
-			samplerHeapPointer,
-			(void*)(m_perInstanceConstantBuffers[m_instances.size() - 1]->GetGPUVirtualAddress())
-		}
-	); // #DXR Extra: Another Ray Type (add heap pointer)
-	m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
+	if (m_instances.size() > 0)
+	{
+		m_sbtHelper.AddHitGroup(L"HitGroup",
+			{
+				(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Directional Shadows
+				(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()), // #DXR Custom : Indexed Plane
+				heapPointer,
+				samplerHeapPointer,
+				(void*)(m_perInstanceConstantBuffers[m_instances.size() - 1]->GetGPUVirtualAddress())
+			}
+		); // #DXR Extra: Another Ray Type (add heap pointer)
+		m_sbtHelper.AddHitGroup(L"ShadowHitGroup", {});
 
-	// #DXR Custom: Reflections
-	m_sbtHelper.AddHitGroup(L"ReflectionHitGroup",
-		{
-			(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()),
-			(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()),
-			heapPointer,
-			samplerHeapPointer,
-			(void*)(m_perInstanceConstantBuffers[m_instances.size() - 1]->GetGPUVirtualAddress())
-		}
-	);
+		// #DXR Custom: Reflections
+		m_sbtHelper.AddHitGroup(L"ReflectionHitGroup",
+			{
+				(void*)(m_planeVertexBuffer->GetGPUVirtualAddress()),
+				(void*)(m_planeIndexBuffer->GetGPUVirtualAddress()),
+				heapPointer,
+				samplerHeapPointer,
+				(void*)(m_perInstanceConstantBuffers[m_instances.size() - 1]->GetGPUVirtualAddress())
+			}
+		);
+	}
 
 	// Compute the size of the SBT given the number of shaders and their parameters
 	uint32_t sbtSize = m_sbtHelper.ComputeSBTSize();
@@ -1354,7 +1364,7 @@ void D3D12HelloTriangle::CreatePerInstanceConstantBuffers()
 		
 		bufferData[i] = Material{ albedo, specular };
 	}
-	bufferData[instanceCount-1] = Material{ XMVECTOR{ 0.8f, 0.8f, 0.8f }, XMVECTOR{ 0.04f, 0.04f, 0.04f } };
+	bufferData[instanceCount-1] = Material{ XMVECTOR{ 0.0f, 0.0f, 0.0f }, XMVECTOR{ 0.7f, 0.7f, 0.8f } };
 
 	m_perInstanceConstantBuffers.resize(instanceCount);
 	int i(0);
@@ -1505,7 +1515,7 @@ void D3D12HelloTriangle::CreateSkyboxTextureBuffer()
 
 	upload.Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-	ThrowIfFailed(CreateWICTextureFromFile(m_device.Get(), upload, L"cape_hill.jpg", &m_skyboxTextureBuffer, false));
+	ThrowIfFailed(CreateWICTextureFromFile(m_device.Get(), upload, L"milkyway_galaxy.jpg", &m_skyboxTextureBuffer, false));
 
 	auto uploadResourcesFinished = upload.End(m_commandQueue.Get());
 
