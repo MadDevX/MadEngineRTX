@@ -69,6 +69,9 @@ void D3D12HelloTriangle::OnInit()
 	// triangle instance
 	CreateGlobalConstantBuffer(); // #DXR Extra: Per-Instance Data
 
+	// Black hole rendering
+	CreateBlackHoleConstantBuffer();
+
 	// Allocate the buffer storing the raytracing output, with the same dimensions
 	// as the target image
 	CreateRaytracingOutputBuffer(); // #DXR
@@ -337,11 +340,15 @@ void D3D12HelloTriangle::LoadAssets()
 // Update frame-based values.
 void D3D12HelloTriangle::OnUpdate()
 {
+	UpdateBlackHoleM();
 	// #DXR Extra: Perspective Camera
 	UpdateCameraBuffer();
 	// #DXR Extra: Refitting (Rasterization)
 	UpdateInstancePropertiesBuffer();
 	
+	// Black hole rendering
+	UpdateBlackHoleBuffer();
+
 	// #DXR Extra: Refitting
 	// Increment the time counter at each frame, and update the corresponding instance matrix of the
 	// first triangle to animate its position
@@ -844,6 +851,7 @@ ComPtr<ID3D12RootSignature> D3D12HelloTriangle::CreateMissSignature()
 	rsc.AddHeapRangesParameter({
 		{0 /*s0*/, 1, 0, D3D12_DESCRIPTOR_RANGE_TYPE_SAMPLER, 0 /*1st slot of the sampler heap*/}
 		});
+	rsc.AddRootParameter(D3D12_ROOT_PARAMETER_TYPE_CBV, 0);
 	return rsc.Generate(m_device.Get(), true);
 }
 
@@ -1110,7 +1118,7 @@ void D3D12HelloTriangle::CreateShaderBindingTable()
 	m_sbtHelper.AddMissProgram(L"ShadowMiss", {});
 
 	// #DXR Custom: Reflections
-	m_sbtHelper.AddMissProgram(L"ReflectionMiss", {heapPointer, samplerHeapPointer});
+	m_sbtHelper.AddMissProgram(L"ReflectionMiss", {heapPointer, samplerHeapPointer, (void*)(m_blackHoleConstantBuffer->GetGPUVirtualAddress())});
 
 	// Adding the triangle hit shader
 	//m_sbtHelper.AddHitGroup(L"HitGroup", {(void*)(m_vertexBuffer->GetGPUVirtualAddress())});
@@ -1249,6 +1257,50 @@ void D3D12HelloTriangle::CreateCameraBuffer()
 	m_device->CreateShaderResourceView(m_instanceProperties.Get(), &srvDesc, srvHandle);
 }
 
+void D3D12HelloTriangle::UpdateBlackHoleM()
+{
+	float incrementPerFrame = 10.0f;
+	float fastMult = 5.0f;
+	float slowMult = 0.1f;
+	if (GetAsyncKeyState(VK_NUMPAD4))
+	{
+		m_blackHoleM -= incrementPerFrame;
+	}
+	if (GetAsyncKeyState(VK_NUMPAD6))
+	{
+		m_blackHoleM += incrementPerFrame;
+	}
+	if (GetAsyncKeyState(VK_NUMPAD7))
+	{
+		m_blackHoleM -= incrementPerFrame * fastMult;
+	}
+	if (GetAsyncKeyState(VK_NUMPAD9))
+	{
+		m_blackHoleM += incrementPerFrame * fastMult;
+	}
+	if (GetAsyncKeyState(VK_NUMPAD1))
+	{
+		m_blackHoleM -= incrementPerFrame * slowMult;
+	}
+	if (GetAsyncKeyState(VK_NUMPAD3))
+	{
+		m_blackHoleM += incrementPerFrame * slowMult;
+	}
+
+	std::wstring windowText = m_raster ? L"DXR Demo: RTX ON | Black Hole M: " : 
+										 L"DXR Demo: RTX OFF | Black Hole M: "  + 
+										std::to_wstring(m_blackHoleM);
+	SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
+}
+
+void D3D12HelloTriangle::UpdateBlackHoleBuffer()
+{
+	uint8_t* pData;
+	ThrowIfFailed(m_blackHoleConstantBuffer->Map(0, nullptr, (void**)&pData));
+	memcpy(pData, &m_blackHoleM, sizeof(m_blackHoleM));
+	m_blackHoleConstantBuffer->Unmap(0, nullptr);
+}
+
 /// <summary>
 /// Creates and copies the viewmodel and perspective matrices of the camera
 /// </summary>
@@ -1339,6 +1391,18 @@ void D3D12HelloTriangle::CreateGlobalConstantBuffer()
 	ThrowIfFailed(m_globalConstantBuffer->Map(0, nullptr, (void**)&pData));
 	memcpy(pData, bufferData, sizeof(bufferData));
 	m_globalConstantBuffer->Unmap(0, nullptr);
+}
+
+void D3D12HelloTriangle::CreateBlackHoleConstantBuffer()
+{
+	m_blackHoleConstantBuffer = nv_helpers_dx12::CreateBuffer(
+		m_device.Get(), sizeof(m_blackHoleM), D3D12_RESOURCE_FLAG_NONE,
+		D3D12_RESOURCE_STATE_GENERIC_READ, nv_helpers_dx12::kUploadHeapProps);
+
+	uint8_t* pData;
+	ThrowIfFailed(m_blackHoleConstantBuffer->Map(0, nullptr, (void**)&pData));
+	memcpy(pData, &m_blackHoleM, sizeof(m_blackHoleM));
+	m_blackHoleConstantBuffer->Unmap(0, nullptr);
 }
 
 // #DXR Extra: Per-Instance Data

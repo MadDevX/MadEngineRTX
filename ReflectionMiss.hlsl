@@ -121,6 +121,11 @@ float3 rotateVector(float3 v, float3 axis, float phi)
     return v * cosPhi + cross(axis, v) * sinPhi + axis * dot(axis, v) * (1.0f - cosPhi);
 }
 
+cbuffer data : register(b0)
+{
+    float M;
+}
+
 Texture2D skybox : register(t0);
 SamplerState skyboxSampler : register(s0);
 
@@ -130,7 +135,6 @@ void ReflectionMiss(inout ReflectionHitInfo hit : SV_RayPayload)
     float3 rayOrigin = WorldRayOrigin();
     float3 rayDir = normalize(WorldRayDirection());
     
-    float M = 1000.0f; //TODO: change dynamically
     float b = distanceToBlackHole(rayOrigin, rayDir);
     float3 col = float3(0.0f, 0.0f, 0.0f);
     

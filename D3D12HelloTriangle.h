@@ -165,6 +165,13 @@ private:
 	void D3D12HelloTriangle::CreateGlobalConstantBuffer();
 	ComPtr<ID3D12Resource> m_globalConstantBuffer;
 
+	void D3D12HelloTriangle::CreateBlackHoleConstantBuffer();
+	ComPtr<ID3D12Resource> m_blackHoleConstantBuffer;
+
+	void UpdateBlackHoleM();
+	float m_blackHoleM = 1000.0f;
+	void UpdateBlackHoleBuffer();
+
 	// #DXR Extra: Per-Instance Data
 	void CreatePerInstanceConstantBuffers();
 	std::vector<ComPtr<ID3D12Resource>> m_perInstanceConstantBuffers;
