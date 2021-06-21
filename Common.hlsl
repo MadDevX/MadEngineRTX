@@ -71,9 +71,7 @@ static const float MIN_SECONDARY_RAY_T_MAX_VALUE = 0.01f;
 // causes pass-through bands visible in specular reflections (scale mismatch)
 
 static const float3 BLACK_HOLE_POS = float3(0.0f, 0.0f, 0.0f);
-static const float EPS = 0.001f;
-static const float W0 = 1.0f;
-static const int ITERATIONS = 10;
+static const float EPS = 0.000001f;
 
 #define NUM_REFLECTIONS 10
 

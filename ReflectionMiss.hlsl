@@ -1,5 +1,13 @@
 #include "Common.hlsl"
 
+
+cbuffer data : register(b0)
+{
+    float M;
+    float NUMBER_OF_INTERVALS;
+    float LAST_COMPONENT_MULT;
+}
+
 float distanceToBlackHole(float3 rayOrigin, float3 rayDirection)
 {
     float3 toBlackHole = BLACK_HOLE_POS - rayOrigin;
@@ -18,19 +26,6 @@ float vanishingF(float w, float M, float b)
 float vanishingFDerivative(float w, float M, float b)
 {
     return (-2.0f + 6.0f * M / b * w) * w;
-}
-
-
-float newtonW(float M, float b)
-{
-    float w = b / (3.0f * M);
-    int i = 0;
-    while (abs(vanishingF(w, M, b)) > EPS || vanishingF(w, M, b) < 0.0f)
-    {
-        w = w - vanishingF(w, M, b) / vanishingFDerivative(w, M, b);
-    }
-    return w;
-
 }
 
 float bisectW(float M, float b)
@@ -65,54 +60,42 @@ float bisectW(float M, float b)
     return l;
 }
 
-float w1(float M, float b)
-{
-    float b2 = b * b;
-    float b3 = b2 * b;
-    float b4 = b3 * b;
-    float M2 = M * M;
-    float M4 = M2 * M2;
-    
-    float weirdRoot = pow(-b3 + 54.0f * b * M2 + 6.0f * b * M * sqrt(-3.0 * b2 + 81.0 * M2), 1.0f / 3.0f);
-    
-    return (-b + (b2 / weirdRoot) + weirdRoot) / (6.0f * M);
-}
-
 float f(float w, float M, float b)
 {
     return pow(1.0f - w * w * (1.0f - 2*M / b * w), -0.5f);
 }
 
 
-static const int NUMBER_OF_INTERVALS = 9; //must be multiple of 3
-float fSimpson(float M, float b, float lowerBound, float upperBound)
+//static const int NUMBER_OF_INTERVALS = 9; //must be multiple of 3
+double fSimpson(float M, float b, float lowerBound, float upperBound)
 {
-    float n = NUMBER_OF_INTERVALS;
-    float lb = lowerBound;
-    float ub = upperBound;
-    float h = (ub - lb) / n;
+    double n = (double) NUMBER_OF_INTERVALS;
+    double lb = (double) lowerBound;
+    double ub = (double) upperBound;
+    double h = (ub - lb) / n;
     
-    float sum = 0.0f;
+    double sum = 0.0;
     
-    sum += f(lb, M, b);
+    double simpsonMult = (3.0 * h / 8.0);
+    
+    sum += simpsonMult * f(lb, M, b);
     for (int i = 1; i < n-2; i = i + 3)
     {
-        sum += 3.0f * f(lb + i * h, M, b);
-        sum += 3.0f * f(lb + (i + 1) * h, M, b);
-        sum += 2.0f * f(lb + (i + 2) * h, M, b);
+        sum += simpsonMult * 3.0 * (double)f(lb + i * h, M, b);
+        sum += simpsonMult * 3.0 * (double)f(lb + (i + 1) * h, M, b);
+        sum += simpsonMult * 2.0 * (double) f(lb + (i + 2) * h, M, b);
     }
-    sum += 3.0f * f(lb + (n - 2) * h, M, b);
-    sum += 3.0f * f(lb + (n - 1) * h, M, b);
-    //sum += f(lb + n * h, M, b);
+    sum += simpsonMult * 3.0 * (double)f(lb + (n - 2) * h, M, b);
+    sum += simpsonMult * (double)LAST_COMPONENT_MULT * (double) f(lb + (n - 1) * h, M, b);
+    //sum += simpsonMult * f(lb + n * h, M, b);
     
-    return (3.0f * h / 8.0f) * sum;
+    //float result = (float) (simpsonMult * sum);
+    return sum;
 }
 
-
-
-float angleOfDeflection(float M, float b)
+double angleOfDeflection(float M, float b)
 {
-    return 2.0f * fSimpson(M, b, 0.0f, bisectW(M, b)) - PI;
+    return 2.0 * fSimpson(M, b, 0.0f, bisectW(M, b)) - (double) PI;
 }
 
 float3 rotateVector(float3 v, float3 axis, float phi)
@@ -123,10 +106,6 @@ float3 rotateVector(float3 v, float3 axis, float phi)
     return v * cosPhi + cross(axis, v) * sinPhi + axis * dot(axis, v) * (1.0f - cosPhi);
 }
 
-cbuffer data : register(b0)
-{
-    float M;
-}
 
 Texture2D skybox : register(t0);
 SamplerState skyboxSampler : register(s0);
@@ -144,15 +123,25 @@ void ReflectionMiss(inout ReflectionHitInfo hit : SV_RayPayload)
     {
         float upperBound = bisectW(M, b);
         float fvalue = vanishingF(upperBound, M, b);
+        float integral = fSimpson(M, b, 0.0f, bisectW(M, b));
         float phi = angleOfDeflection(M, b);
+        //if (2.0f * M / b < 2500.0f * 0.0001f && phi < 0.0f)
+        //    phi = 0.0f;
         //phi = 4.0f * M / b;
         float3 axisOfRotation = normalize(cross(rayDir, normalize(BLACK_HOLE_POS - rayOrigin)));
     
         float3 deflectedRayDir = rotateVector(rayDir, axisOfRotation, phi);
      
-        col = skybox.SampleLevel(skyboxSampler, DirectionToSpherical(deflectedRayDir), 0).rgb;
+        if(phi < 0.0f)
+        {
+            col = float3(0.0f, 0.0f, 0.0f);
+        }
+        else
+        {
+            col = skybox.SampleLevel(skyboxSampler, DirectionToSpherical(deflectedRayDir), 0).rgb;
+        }
         //col = float3(fvalue*10.0f, upperBound * 0.1f, 0.0f);
-        //col = float3(2.0f * M / b, 0.0f, 0.0f);
+        //col = float3(phi * 0.2f, -phi * 0.2f, 0.0f);
     }
     //else
     //{

@@ -608,6 +608,15 @@ void D3D12HelloTriangle::OnKeyUp(UINT8 key)
 			SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
 		}
 	}
+	if (key == VK_NUMPAD8)
+	{
+		m_numOfIntervals += 3;
+	}
+	if (key == VK_NUMPAD2)
+	{
+		m_numOfIntervals = std::max(3, m_numOfIntervals - 3);
+	}
+
 	if (key == VK_ESCAPE)
 	{
 		PostQuitMessage(0);
@@ -1261,7 +1270,6 @@ void D3D12HelloTriangle::UpdateBlackHoleM()
 {
 	float incrementPerFrame = 10.0f;
 	float fastMult = 500.0f;
-	float slowMult = 0.1f;
 	if (GetAsyncKeyState(VK_NUMPAD4))
 	{
 		m_blackHoleM -= incrementPerFrame;
@@ -1280,12 +1288,13 @@ void D3D12HelloTriangle::UpdateBlackHoleM()
 	}
 	if (GetAsyncKeyState(VK_NUMPAD1))
 	{
-		m_blackHoleM -= incrementPerFrame * slowMult;
+		m_lastComponentMult -= 0.01f;
 	}
 	if (GetAsyncKeyState(VK_NUMPAD3))
 	{
-		m_blackHoleM += incrementPerFrame * slowMult;
+		m_lastComponentMult += 0.01f;
 	}
+
 	m_blackHoleM = fmaxf(m_blackHoleM, 0.01f);
 
 	glm::vec3 eye, at, up;
@@ -1296,15 +1305,24 @@ void D3D12HelloTriangle::UpdateBlackHoleM()
 	std::wstring windowText = m_raster ? L"DXR Demo: RTX OFF | Black Hole M: " : 
 										 L"DXR Demo: RTX ON | Black Hole M: "  + 
 										std::to_wstring(m_blackHoleM) + 
-										L" | Distance: " + std::to_wstring(distance);
+										L" | Distance: " + std::to_wstring(distance) + 
+										L" | Integration intervals: " + std::to_wstring(m_numOfIntervals) +
+										L" | Integration last component mult: " + std::to_wstring(m_lastComponentMult);
 	SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
 }
 
 void D3D12HelloTriangle::UpdateBlackHoleBuffer()
 {
+	float bufferData[] =
+	{
+		m_blackHoleM,
+		(float)m_numOfIntervals,
+		m_lastComponentMult
+	};
+
 	uint8_t* pData;
 	ThrowIfFailed(m_blackHoleConstantBuffer->Map(0, nullptr, (void**)&pData));
-	memcpy(pData, &m_blackHoleM, sizeof(m_blackHoleM));
+	memcpy(pData, bufferData, sizeof(bufferData));
 	m_blackHoleConstantBuffer->Unmap(0, nullptr);
 }
 
