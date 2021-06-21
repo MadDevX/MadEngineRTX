@@ -1260,7 +1260,7 @@ void D3D12HelloTriangle::CreateCameraBuffer()
 void D3D12HelloTriangle::UpdateBlackHoleM()
 {
 	float incrementPerFrame = 10.0f;
-	float fastMult = 5.0f;
+	float fastMult = 500.0f;
 	float slowMult = 0.1f;
 	if (GetAsyncKeyState(VK_NUMPAD4))
 	{
@@ -1286,10 +1286,17 @@ void D3D12HelloTriangle::UpdateBlackHoleM()
 	{
 		m_blackHoleM += incrementPerFrame * slowMult;
 	}
+	m_blackHoleM = fmaxf(m_blackHoleM, 0.01f);
 
-	std::wstring windowText = m_raster ? L"DXR Demo: RTX ON | Black Hole M: " : 
-										 L"DXR Demo: RTX OFF | Black Hole M: "  + 
-										std::to_wstring(m_blackHoleM);
+	glm::vec3 eye, at, up;
+	nv_helpers_dx12::CameraManip.getLookat(eye, at, up);
+
+	float distance = sqrtf(eye.x * eye.x + eye.y * eye.y + eye.z * eye.z);
+
+	std::wstring windowText = m_raster ? L"DXR Demo: RTX OFF | Black Hole M: " : 
+										 L"DXR Demo: RTX ON | Black Hole M: "  + 
+										std::to_wstring(m_blackHoleM) + 
+										L" | Distance: " + std::to_wstring(distance);
 	SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
 }
 
