@@ -1288,11 +1288,11 @@ void D3D12HelloTriangle::UpdateBlackHoleM()
 	}
 	if (GetAsyncKeyState(VK_NUMPAD1))
 	{
-		m_lastComponentMult -= 0.01f;
+		m_lastComponentOffset = std::max(m_lastComponentOffset - 0.0001f, 0.0f);
 	}
 	if (GetAsyncKeyState(VK_NUMPAD3))
 	{
-		m_lastComponentMult += 0.01f;
+		m_lastComponentOffset += 0.0001f;
 	}
 
 	m_blackHoleM = fmaxf(m_blackHoleM, 0.01f);
@@ -1307,7 +1307,7 @@ void D3D12HelloTriangle::UpdateBlackHoleM()
 										std::to_wstring(m_blackHoleM) + 
 										L" | Distance: " + std::to_wstring(distance) + 
 										L" | Integration intervals: " + std::to_wstring(m_numOfIntervals) +
-										L" | Integration last component mult: " + std::to_wstring(m_lastComponentMult);
+										L" | Integration last component offset: " + std::to_wstring(m_lastComponentOffset);
 	SetWindowText(Win32Application::GetHwnd(), windowText.c_str());
 }
 
@@ -1317,7 +1317,7 @@ void D3D12HelloTriangle::UpdateBlackHoleBuffer()
 	{
 		m_blackHoleM,
 		(float)m_numOfIntervals,
-		m_lastComponentMult
+		m_lastComponentOffset
 	};
 
 	uint8_t* pData;
@@ -1604,7 +1604,7 @@ void D3D12HelloTriangle::CreateSkyboxTextureBuffer()
 
 	upload.Begin(D3D12_COMMAND_LIST_TYPE_DIRECT);
 
-	ThrowIfFailed(CreateWICTextureFromFile(m_device.Get(), upload, L"milkyway_galaxy.jpg", &m_skyboxTextureBuffer, false));
+	ThrowIfFailed(CreateWICTextureFromFile(m_device.Get(), upload, L"milkyway_galaxy_16k.jpg", &m_skyboxTextureBuffer, false));
 
 	auto uploadResourcesFinished = upload.End(m_commandQueue.Get());
 

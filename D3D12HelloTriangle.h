@@ -171,7 +171,7 @@ private:
 	void UpdateBlackHoleM();
 	float m_blackHoleM = 1000.0f;
 	int m_numOfIntervals = 30;
-	float m_lastComponentMult = 6.52f;
+	float m_lastComponentOffset = 0.0027f;//6.52f;
 	void UpdateBlackHoleBuffer();
 
 	// #DXR Extra: Per-Instance Data

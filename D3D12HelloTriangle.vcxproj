@@ -211,6 +211,7 @@
     <Image Include="cape_hill_2k.dds" />
     <Image Include="cape_hill_2k.png" />
     <Image Include="milkyway_galaxy.jpg" />
+    <Image Include="milkyway_galaxy_16k.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
